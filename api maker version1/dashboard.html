@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard | API Maker Pro</title>
+    <style>
+      :root { --bg:#07111f; --card:#101c30; --text:#f8fafc; --muted:#9fb0c9; --accent:#5eead4; --accent-2:#7c3aed; --danger:#ff6b6b; --success:#34d399; }
+      *{box-sizing:border-box;} body{margin:0;font-family:Inter,Segoe UI,Roboto,sans-serif;background:linear-gradient(135deg,var(--bg),#111827);color:var(--text);} .page{max-width:1200px;margin:0 auto;padding:24px;} nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;} .brand{font-size:1.4rem;font-weight:700;} .btn{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:white;border:none;padding:12px 16px;border-radius:999px;cursor:pointer;font-weight:600;} .btn.secondary{background:#1f2937;} .card{background:rgba(16,28,48,0.95);border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:20px;box-shadow:0 16px 40px rgba(0,0,0,0.25);} .grid{display:grid;grid-template-columns:1.2fr 0.8fr;gap:20px;} .status{padding:12px 14px;border-radius:12px;background:rgba(94,234,212,0.16);color:var(--accent);margin-top:10px;} .status.error{color:var(--danger);background:rgba(255,107,107,0.16);} .muted{color:var(--muted);} .code{background:#020617;padding:14px;border-radius:12px;color:#cbd5e1;font-family:Consolas,monospace;white-space:pre-wrap;line-height:1.5;} .pill{display:inline-block;padding:8px 10px;border-radius:999px;background:rgba(124,58,237,0.18);color:#d8b4fe;margin-right:8px;margin-top:8px;} @media (max-width:900px){.grid{grid-template-columns:1fr;}}
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <nav>
+        <div class="brand">API Maker Pro</div>
+        <div><button class="btn secondary" onclick="logout()">Logout</button></div>
+      </nav>
+      <div class="grid">
+        <div class="card">
+          <h2>AI API Builder Dashboard</h2>
+          <p class="muted">Create new APIs, record your idea, and publish them instantly.</p>
+          <div id="userMeta" class="pill"></div>
+          <div id="planMeta" class="pill"></div>
+          <div id="status" class="status">Ready. Describe the API you want to build.</div>
+          <br />
+          <button class="btn" id="recordBtn">Start Recording</button>
+          <button class="btn secondary" onclick="window.location.href='/plans'">Change Plan</button>
+          <br /><br />
+          <textarea id="promptInput" rows="5" style="width:100%;padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:#16253e;color:white;" placeholder="Example: Create a REST API that returns a welcome message and a random quote."></textarea>
+          <br /><br />
+          <button class="btn" onclick="buildApi()">Generate API</button>
+        </div>
+        <div class="card">
+          <h3>Generated Endpoint</h3>
+          <div id="endpointBox" class="code">No endpoint yet.</div>
+          <br />
+          <h3>How to call it</h3>
+          <div id="callBox" class="code">/api/demo</div>
+          <br />
+          <h3>Live API Response</h3>
+          <div id="responseBox" class="code">{ "status": "waiting" }</div>
+        </div>
+      </div>
+    </div>
+    <script>
+      const statusBox = document.getElementById('status');
+      const endpointBox = document.getElementById('endpointBox');
+      const callBox = document.getElementById('callBox');
+      const responseBox = document.getElementById('responseBox');
+      async function loadDashboard() {
+        const meRes = await fetch('/api/me');
+        if (meRes.status !== 200) { window.location.href = '/'; return; }
+        const me = await meRes.json();
+        document.getElementById('userMeta').textContent = `User: ${me.user.email}`;
+        document.getElementById('planMeta').textContent = `Plan: ${me.user.plan}`;
+      }
+      async function buildApi() {
+        const prompt = document.getElementById('promptInput').value.trim();
+        if (!prompt) { statusBox.className='status error'; statusBox.textContent='Please describe the API first.'; return; }
+        statusBox.className='status'; statusBox.textContent='Preparing your API...';
+        try {
+          statusBox.textContent = 'Preparing your API...';
+          const res = await fetch('/api/build', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ prompt })
+          });
+          const data = await res.json();
+          if (!res.ok) { statusBox.className='status error'; statusBox.textContent=data.message; return; }
+          statusBox.textContent = 'Processing your request...';
+          const endpoint = `/api/${data.id}`;
+          endpointBox.textContent = endpoint;
+          callBox.textContent = `${endpoint}?name=AI`;
+          responseBox.textContent = JSON.stringify({
+            message: 'API ready',
+            endpoint,
+            prompt: data.prompt,
+            response: data.response.response
+          }, null, 2);
+          statusBox.className='status'; statusBox.textContent = 'Done ✅ API is ready. You can call it now.';
+        } catch (error) {
+          statusBox.className='status error';
+          statusBox.textContent = 'Connection failed. Please refresh and try again.';
+        }
+      }
+      document.getElementById('recordBtn').addEventListener('click', () => {
+        statusBox.className='status'; statusBox.textContent='Recording started. Please describe your API idea.';
+      });
+      async function logout() {
+        await fetch('/api/logout', { method:'POST' });
+        window.location.href = '/';
+      }
+      loadDashboard();
+    </script>
+  </body>
+</html>
