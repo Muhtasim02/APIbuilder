@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Plans | API Maker Pro</title>
+    <style>
+      :root { --bg:#07111f; --card:#101c30; --text:#f8fafc; --muted:#9fb0c9; --accent:#5eead4; --accent-2:#7c3aed; --danger:#ff6b6b; --success:#34d399; }
+      *{box-sizing:border-box;} body{margin:0;font-family:Inter,Segoe UI,Roboto,sans-serif;background:linear-gradient(135deg,var(--bg),#111827);color:var(--text);} .page{max-width:1100px;margin:0 auto;padding:24px;} nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;} .brand{font-size:1.4rem;font-weight:700;} .btn{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:white;border:none;padding:12px 16px;border-radius:999px;cursor:pointer;font-weight:600;} .btn.secondary{background:#1f2937;} .card{background:rgba(16,28,48,0.95);border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:24px;box-shadow:0 16px 40px rgba(0,0,0,0.25);} .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:20px;} .plan{display:flex;flex-direction:column;gap:10px;} .plan ul{color:var(--muted);padding-left:16px;} .tag{display:inline-block;width:max-content;padding:6px 10px;border-radius:999px;background:rgba(94,234,212,0.16);color:var(--accent);font-size:0.84rem;} .muted{color:var(--muted);} .msg{min-height:24px;margin-top:10px;font-weight:600;} .msg.success{color:var(--success);} .msg.error{color:var(--danger);} form{display:grid;gap:12px;margin-top:10px;} input{padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:#16253e;color:var(--text);} .hidden{display:none;} @media (max-width:900px){.grid{grid-template-columns:1fr;}}
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <nav>
+        <div class="brand">API Maker Pro</div>
+        <div><button class="btn secondary" onclick="logout()">Logout</button></div>
+      </nav>
+      <div class="card">
+        <h1>Choose your plan</h1>
+        <p class="muted">Select your plan and complete a bKash payment for Normal or Premium. Free gives you 5 API generations with paid calls.</p>
+        <div id="userInfo" class="tag"></div>
+        <div class="msg" id="msg"></div>
+        <div class="grid">
+          <div class="card plan">
+            <h3>Free</h3>
+            <p class="muted">Try the platform with 5 API generations.</p>
+            <ul><li>5 API creations</li><li>Calls are not free</li><li>Basic dashboard</li></ul>
+            <button class="btn" onclick="selectPlan('free')">Select Free</button>
+          </div>
+          <div class="card plan">
+            <h3>Normal</h3>
+            <p class="muted">For active builders and small products.</p>
+            <ul><li>Unlimited API creations</li><li>Priority processing</li><li>Basic analytics</li></ul>
+            <form id="normalForm" onsubmit="payAndSelect(event,'normal')">
+              <input id="normalPhone" placeholder="bKash number" required />
+              <input id="normalTx" placeholder="Transaction ID" required />
+              <button class="btn" type="submit">Pay and Activate</button>
+            </form>
+          </div>
+          <div class="card plan">
+            <h3>Premium</h3>
+            <p class="muted">For serious teams and advanced usage.</p>
+            <ul><li>Unlimited API creations</li><li>LLM-powered generation</li><li>Advanced analytics</li></ul>
+            <form id="premiumForm" onsubmit="payAndSelect(event,'premium')">
+              <input id="premiumPhone" placeholder="bKash number" required />
+              <input id="premiumTx" placeholder="Transaction ID" required />
+              <button class="btn" type="submit">Pay and Activate</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      const msg = document.getElementById('msg');
+      async function loadUser() {
+        const res = await fetch('/api/me');
+        if (res.status !== 200) { window.location.href = '/'; return; }
+        const data = await res.json();
+        document.getElementById('userInfo').textContent = `Signed in as ${data.user.email}`;
+      }
+      async function selectPlan(plan) {
+        const res = await fetch('/api/plan', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ plan })
+        });
+        const data = await res.json();
+        msg.className = 'msg ' + (res.ok ? 'success' : 'error');
+        msg.textContent = data.message;
+        if (res.ok) setTimeout(() => window.location.href = '/dashboard', 700);
+      }
+      async function payAndSelect(event, plan) {
+        event.preventDefault();
+        const phone = document.getElementById(plan === 'normal' ? 'normalPhone' : 'premiumPhone').value.trim();
+        const tx = document.getElementById(plan === 'normal' ? 'normalTx' : 'premiumTx').value.trim();
+        const res = await fetch('/api/plan', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ plan, paymentPhone: phone, paymentId: tx })
+        });
+        const data = await res.json();
+        msg.className = 'msg ' + (res.ok ? 'success' : 'error');
+        msg.textContent = data.message;
+        if (res.ok) setTimeout(() => window.location.href = '/dashboard', 900);
+      }
+      async function logout() {
+        await fetch('/api/logout', { method: 'POST' });
+        window.location.href = '/';
+      }
+      loadUser();
+    </script>
+  </body>
+</html>
